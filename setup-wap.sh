@@ -45,7 +45,7 @@ if ((INTERFACE_I < 1 || INTERFACE_I > ${#WIFI_INTERFACES[@]})); then
 fi
 INTERFACE_NAME="${WIFI_INTERFACES[${INTERFACE_I} - 1]}"
 
-# Create a virtual interface for the software WAP
+# Create a virtual interface for the software WAP and set it to AP mode
 WAP_INTERFACE_NAME="${INTERFACE_NAME}_wap"
 echo -e "Creating virtual interface ${BOLD}${WAP_INTERFACE_NAME}${NORMAL} for the software WAP"
 sudo iw dev "${INTERFACE_NAME}" interface add "${WAP_INTERFACE_NAME}" type __ap
@@ -54,6 +54,12 @@ echo -e
 # Ignore the software WAP in NetworkManager
 echo -e "Ignoring ${BOLD}${WAP_INTERFACE_NAME}${NORMAL} in NetworkManager"
 sudo nmcli device set "${WAP_INTERFACE_NAME}" managed no
+echo -e
+
+# Set the software WAP to AP mode
+echo -e "Setting ${BOLD}${WAP_INTERFACE_NAME}${NORMAL} to AP mode"
+sudo ip link set dev "${WAP_INTERFACE_NAME}" down
+sudo iw dev "${WAP_INTERFACE_NAME}" set type __ap
 echo -e
 
 # Spoof the MAC address of the software WAP
@@ -149,7 +155,7 @@ sudo tee "${DNSMASQ_CONF_FILE}" >/dev/null <<EOF
 interface=${WAP_INTERFACE_NAME}
 # Range of IP addresses available for lease & a lease time
 # First 3 octets should match the IP of the software WAP
-dhcp-range=${WAP_IP_NETWORK_ID}.2,${WAP_IP_NETWORK_ID}.100,12h
+dhcp-range=${WAP_IP_NETWORK_ID}.2,${WAP_IP_NETWORK_ID}.100,255.255.255.0,12h
 # Gateway and DNS server set to the software WAP's IP
 # All DNS queries now guaranteed to go through the software WAP
 dhcp-option=3,${WAP_IP} # Gateway
@@ -197,20 +203,46 @@ interface=${WAP_INTERFACE_NAME}
 driver=nl80211
 # Country code to indicate country device is operating in
 country_code=US
+# Set regulatory limits
+ieee80211d=1
+# Enable DFS & radar support
+ieee80211h=1
 # Service Set Identifier (SSID), or name, of the software WAP
 ssid=${SSID}
 # Enable 802.11ac support
 ieee80211ac=1
 # Enable Wi-Fi Multimedia (WMM) to enhance quality of service (QoS)
 wmm_enabled=1
-# Hardware mode ('a' for 5 GHz on 802.11ac Wi-Fi 5)
+# Hardware mode
+# 'a' for 5 GHz on 802.11ac Wi-Fi 5
+# 'g' for 2.4GHz on IEEE 802.11g
 hw_mode=a
 # software WAP channel (must be the same as the Wi-Fi channel)
 channel=${CHANNEL}
+# Beacon interval in kus (1.024 ms)
+beacon_int=100
+# DTIM (delivery traffic information message) period
+dtim_period=2
 # Open System Authentication (no password) for insecure Wi-Fi network
-auth_algs=1
+# auth_algs=1
 # Stations are not required to know the SSID to connect to the network
 ignore_broadcast_ssid=0
+# Enable short preamble for improved network performance
+preamble=1
+# Allow Open, Shared Key, and WPA authentication
+auth_algs=3
+# Enable WPA2
+wpa=2
+# Use Pre-Shared Key (password) for WPA2
+wpa_key_mgmt=WPA-PSK
+# WPA (v1) encryption: CCMP (AES)
+wpa_pairwise=CCMP
+# WPA2 (RSN) encryption: CCMP (AES)
+rsn_pairwise=CCMP
+# Wi-Fi password
+wpa_passphrase=secret123
+# Disable Management Frame Protection (MFP) – allows deauth attacks
+ieee80211w=0
 EOF
 
 # Run the hostapd configuration file in the background
@@ -218,4 +250,6 @@ echo -e "Running ${BOLD}${HOSTAPD_CONF_FILE}${NORMAL} in the background"
 sudo hostapd -B ${HOSTAPD_CONF_FILE} >/dev/null
 echo -e
 
+# Enable the software WAP interface
+sudo ip link set dev "${WAP_INTERFACE_NAME}" up
 echo -e "${GREEN}Software WAP running on name ${BOLD}${SSID}${NORMAL}"

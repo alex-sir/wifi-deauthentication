@@ -41,6 +41,12 @@ INTERFACE_NAME_MONITOR="${WIFI_INTERFACES[${INTERFACE_I} - 1]}"
 
 # Ask user to enter BSSID value of the WAP they wish to attack
 read -rp "Enter BSSID of WAP to attack (MAC Address, e.g. AA:BB:CC:11:22:33): " BSSID
+read -rp "Enter CH (Channel) of WAP to attack (1-165): " CHANNEL
+echo -e
+
+# Change the channel of the interface to match that of the software WAP being attacked
+echo -e "Setting channel of ${BOLD}${INTERFACE_NAME_MONITOR}${NORMAL} to ${BOLD}${CHANNEL}${NORMAL}"
+sudo iw dev "${INTERFACE_NAME_MONITOR}" set channel "${CHANNEL}"
 echo -e
 
 # Perform the deauthentication attack by deauthenticating clients from a WAP
