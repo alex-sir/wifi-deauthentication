@@ -1,5 +1,5 @@
 #!/bin/bash
-# Perform a simulation of a Wi-Fi deauthentication attack using aircrack-ng
+# Deauthentication Attack Step 1: Display information relating to a WAP that will face a deauthentication attack
 # Dependencies:
 # - https://github.com/aircrack-ng/aircrack-ng
 # - https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git
@@ -18,7 +18,7 @@ echo -e "${YELLOW}=== Perform Deauthentication Attack Step 1: Display ===${NORMA
 # Three terminal windows are required for the attack, notify the user
 echo -e "Three terminal windows are ${BOLD}required${NORMAL} to perform the deauthentication attack:"
 echo -e "${GREEN}${BOLD}1. Display the WAP that will be attacked${NORMAL}"
-echo -e "2. Capture data from the WAP into a file"
+echo -e "2. Capture data traffic from the WAP into a file"
 echo -e "3. Perform the deauthentication attack"
 echo -e
 
@@ -59,10 +59,11 @@ echo -e
 sudo airodump-ng -b abg "${INTERFACE_NAME_MONITOR}"
 # Ask user to enter BSSID value of the WAP they wish to attack
 read -rp "Enter BSSID of WAP to attack (MAC Address, e.g. AA:BB:CC:11:22:33): " BSSID
+read -rp "Enter CH (Channel) of WAP to attack (1-165): " CHANNEL
 echo -e
 
 # Display only the specified WAP that will be attacked
-echo -e "Displaying WAP with BSSID ${BOLD}${BSSID}${NORMAL}"
+echo -e "Displaying WAP with BSSID ${BOLD}${BSSID}${NORMAL} on channel ${BOLD}${CHANNEL}${NORMAL}"
 read -n 1 -s -r -p "Press any key to continue..."
 echo -e
-sudo airodump-ng -b abg "${INTERFACE_NAME_MONITOR}" -d "${BSSID}"
+sudo airodump-ng -b abg "${INTERFACE_NAME_MONITOR}" -c "${CHANNEL}" -d "${BSSID}"

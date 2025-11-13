@@ -192,6 +192,9 @@ else
   echo -e "${BOLD}${HOSTAPD_CONF_FILE}${NORMAL} already exists. File will be overwritten."
 fi
 
+# TODO: Ask user to input which security protocol to use (e.g., WEP, WPA1, WPA2)
+# TODO: Ask user to input a password for the Wi-Fi after they select a security protocol
+# TODO: Programatically acquire the band for the software WAP (2.4 GHz vs 5 GHz)
 # Set the contents of the hostapd configuration file
 sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # hostapd configuration file to create a software wireless access point (software WAP)

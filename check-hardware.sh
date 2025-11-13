@@ -11,7 +11,7 @@ BLUE="\e[0;34m"
 YELLOW="\e[0;33m"
 NORMAL="\e[0m"
 
-NUM_REQUIRED_WIFI_INTERFACES=2
+NUM_REQUIRED_WIFI_INTERFACES=1
 
 echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack Simulation Using Arch Linux ***${NORMAL}"
 echo -e "${YELLOW}=== Hardware Check ===${NORMAL}"
