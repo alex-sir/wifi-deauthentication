@@ -19,6 +19,7 @@ REQUIRED_PACKAGES=(
   "networkmanager"
   "nftables"
   "psmisc"
+  "ripgrep"
   "wireshark-qt"
 )
 OPTIONAL_PACKAGES=(

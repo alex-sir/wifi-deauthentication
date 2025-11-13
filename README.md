@@ -18,6 +18,7 @@ software WAP on Arch Linux. For demonstration purposes only.
 - **nftables**: Framework for packet filtering, NAT, and other tasks involving
   packet management.
 - **psmisc**: Miscellaneous tools for the proc file system.
+- **ripgrep**: Fast regex search tool.
 - **wireshark-qt**: Qt-based GUI for Wireshark, a network protocol analyzer.
 
 ## Order of Execution for Scripts

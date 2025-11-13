@@ -192,8 +192,6 @@ else
   echo -e "${BOLD}${HOSTAPD_CONF_FILE}${NORMAL} already exists. File will be overwritten."
 fi
 
-# TODO: Ask user to input which security protocol to use (e.g., WEP, WPA1, WPA2)
-# TODO: Ask user to input a password for the Wi-Fi after they select a security protocol
 # TODO: Programatically acquire the band for the software WAP (2.4 GHz vs 5 GHz)
 # Set the contents of the hostapd configuration file
 sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
@@ -226,12 +224,52 @@ channel=${CHANNEL}
 beacon_int=100
 # DTIM (delivery traffic information message) period
 dtim_period=2
-# Open System Authentication (no password) for insecure Wi-Fi network
-# auth_algs=1
 # Stations are not required to know the SSID to connect to the network
 ignore_broadcast_ssid=0
 # Enable short preamble for improved network performance
 preamble=1
+EOF
+
+# Ask user to input which security protocol to use (None, WEP, WPA, WPA2)
+USING_SECURITY_PROTOCOL=true
+SECURITY_PROTOCOL="WPA"
+echo -e "Select a wireless security protocol to use for the software WAP:"
+select response in "None" "WEP" "WPA" "WPA2"; do
+  case $response in
+  None)
+    USING_SECURITY_PROTOCOL=false
+    sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Open System Authentication (no password) for insecure Wi-Fi network
+auth_algs=1
+EOF
+    echo -e "${RED}Warning: Open Wi-Fi network - ANYONE can connect!${NORMAL}"
+    break
+    ;;
+  WEP)
+    sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Shared Key Authentication (WEP)
+auth_algs=3
+# Static WEP key configuration
+# Key number to use when transmitting
+wep_default_key=0
+wep_key0=""
+EOF
+    SECURITY_PROTOCOL="WEP"
+    echo -e "Using Wired Equivalent Privacy (WEP)${NORMAL}"
+    break
+    ;;
+  WPA)
+    break
+    ;;
+  WPA2)
+    break
+    ;;
+  esac
+done
+echo -e
+sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Open System Authentication (no password) for insecure Wi-Fi network
+# auth_algs=1
 # Allow Open, Shared Key, and WPA authentication
 auth_algs=3
 # Enable WPA2
@@ -242,11 +280,18 @@ wpa_key_mgmt=WPA-PSK
 wpa_pairwise=CCMP
 # WPA2 (RSN) encryption: CCMP (AES)
 rsn_pairwise=CCMP
-# Wi-Fi password
-wpa_passphrase=secret123
 # Disable Management Frame Protection (MFP) – allows deauth attacks
 ieee80211w=0
 EOF
+
+# TODO: Ask user to input a Wi-Fi password after they select a security protocol
+WIFI_PASSWORD=""
+if [ "$USING_SECURITY_PROTOCOL" == "true" ]; then
+  sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Wi-Fi password
+wpa_passphrase=${WIFI_PASSWORD}
+EOF
+fi
 
 # Run the hostapd configuration file in the background
 echo -e "Running ${BOLD}${HOSTAPD_CONF_FILE}${NORMAL} in the background"
@@ -256,3 +301,4 @@ echo -e
 # Enable the software WAP interface
 sudo ip link set dev "${WAP_INTERFACE_NAME}" up
 echo -e "${GREEN}Software WAP running on name ${BOLD}${SSID}${NORMAL}"
+EOF
