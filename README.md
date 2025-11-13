@@ -25,7 +25,6 @@ software WAP on Arch Linux. For demonstration purposes only.
 1. check-packages.sh
 2. check-hardware.sh
 3. setup-wap.sh
-4. display.sh
-5. capture.sh
-6. attack.sh
-7. cleanup.sh
+4. capture.sh
+5. attack.sh
+6. cleanup.sh
