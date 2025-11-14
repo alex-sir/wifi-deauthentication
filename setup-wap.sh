@@ -159,7 +159,7 @@ else
   echo -e "${BOLD}${DNSMASQ_CONF_FILE}${NORMAL} already exists. File will be overwritten."
 fi
 
-# Set the contents of the hostapd configuration file
+# Set the contents of the dnsmasq configuration file
 tee "${DNSMASQ_CONF_FILE}" >/dev/null <<EOF
 # dnsmasq configuration file for a software wireless access point (software WAP)
 # Provides DHCP & DNS services to devices connecting to the software WAP
@@ -192,11 +192,6 @@ echo -e
 # *********************************************************************
 echo -e "${YELLOW}=== CONFIGURING HOSTAPD ===${NORMAL}\n"
 
-# Grab the channel that the software WAP is connected to in the Wi-Fi network
-CHANNEL=$(iw dev "$INTERFACE_NAME" info | rg -oP 'channel \K\d+')
-echo -e "Parent interface ${BOLD}${INTERFACE_NAME}${NORMAL} connected on channel ${BOLD}${CHANNEL}${NORMAL}"
-echo -e
-
 # Create the hostapd configuration file for the software WAP
 HOSTAPD_CONF_FILE="/etc/hostapd/hostapd-deauth.conf"
 if [ ! -f "${HOSTAPD_CONF_FILE}" ]; then
@@ -208,7 +203,10 @@ else
 fi
 echo -e
 
-# TODO: Programatically acquire the band for the software WAP (2.4 GHz vs 5 GHz)
+# Grab the channel that the software WAP will connect to
+CHANNEL=$(iw dev "$INTERFACE_NAME" info | rg -oP 'channel \K\d+')
+echo -e "Parent interface ${BOLD}${INTERFACE_NAME}${NORMAL} connected on channel ${BOLD}${CHANNEL}${NORMAL}"
+
 # Set the contents of the hostapd configuration file
 tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # hostapd configuration file to create a software wireless access point (software WAP)
@@ -226,14 +224,8 @@ ieee80211d=1
 ieee80211h=1
 # Service Set Identifier (SSID), or name, of the software WAP
 ssid=${SSID}
-# Enable 802.11ac support
-ieee80211ac=1
 # Enable Wi-Fi Multimedia (WMM) to enhance quality of service (QoS)
 wmm_enabled=1
-# Hardware mode
-# 'a' for 5 GHz on 802.11ac Wi-Fi 5
-# 'g' for 2.4GHz on IEEE 802.11g
-hw_mode=a
 # software WAP channel (must be the same as the Wi-Fi channel)
 channel=${CHANNEL}
 # Beacon interval in kus (1.024 ms)
@@ -245,6 +237,25 @@ ignore_broadcast_ssid=0
 # Enable short preamble for improved network performance
 preamble=1
 EOF
+
+# Check if the software WAP will connect on 2.4 GHz, 5 GHz, or 6 GHz frequency
+FREQUENCY=$(iw dev "$INTERFACE_NAME" info | rg -oP '\(\K\d+ [a-zA-Z]+(?=\))')
+echo -e "Parent interface ${BOLD}${INTERFACE_NAME}${NORMAL} connected on frequency ${BOLD}${FREQUENCY}${NORMAL}"
+case "$FREQUENCY" in
+2*)
+  tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Operation mode (2.4 GHz)
+hw_mode=g
+EOF
+  ;;
+5* | 6*)
+  tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Operation mode (5 GHz or 6 GHz)
+hw_mode=a
+EOF
+  ;;
+esac
+echo -e
 
 # Ask user to input which security protocol to use (None, WEP, WPA-PSK, WPA2-PSK)
 USING_SECURITY_PROTOCOL=true
@@ -272,6 +283,12 @@ EOF
     ;;
   WPA-PSK)
     tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Enable high throughput (HT)
+ieee80211n=1
+# Enable 802.11ac support (Wi-Fi 5)
+ieee80211ac=1
+# Enable 802.11ax support (Wi-Fi 6)
+ieee80211ax=1
 # Open System Authentication (OSA) with password
 auth_algs=1
 # Enable WPA
@@ -288,6 +305,10 @@ EOF
     ;;
   WPA2-PSK)
     tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Enable high throughput (HT)
+ieee80211n=1
+# Enable 802.11ac support (Wi-Fi 5)
+ieee80211ac=1
 # Open System Authentication (OSA) with password
 auth_algs=1
 # Enable WPA2
