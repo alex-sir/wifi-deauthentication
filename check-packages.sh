@@ -1,5 +1,12 @@
 #!/bin/bash
 # Check & install required & optional Arch Linux packages for a Wi-Fi deauthentication attack simulation
+# Author: Alex Carbajal
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root"
+  exit
+fi
 
 BOLD="\e[1m"
 RED="\e[0;31m"
@@ -7,6 +14,13 @@ GREEN="\e[0;32m"
 BLUE="\e[0;34m"
 YELLOW="\e[0;33m"
 NORMAL="\e[0m"
+
+# Let user terminate the script at any time
+exit_script() {
+  echo -e "${RED}\n\nPackage check interrupted. Exiting...${NORMAL}"
+  exit 130
+}
+trap exit_script INT
 
 REQUIRED_PACKAGES=(
   "aircrack-ng"
@@ -81,7 +95,7 @@ if [ "$all_required_packages_installed" == "false" ]; then
   select response in "Yes" "No"; do
     case $response in
     Yes)
-      sudo pacman -Syu "${MISSING_REQUIRED_PACKAGES[@]}"
+      pacman -Syu "${MISSING_REQUIRED_PACKAGES[@]}"
       break
       ;;
     No) break ;;
@@ -97,7 +111,7 @@ if [ "$all_optional_packages_installed" == "false" ]; then
   select response in "Yes" "No"; do
     case $response in
     Yes)
-      sudo pacman -Syu "${MISSING_OPTIONAL_PACKAGES[@]}"
+      pacman -Syu "${MISSING_OPTIONAL_PACKAGES[@]}"
       break
       ;;
     No) break ;;

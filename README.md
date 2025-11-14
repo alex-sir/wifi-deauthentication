@@ -21,7 +21,10 @@ software WAP on Arch Linux. For demonstration purposes only.
 - **ripgrep**: Fast regex search tool.
 - **wireshark-qt**: Qt-based GUI for Wireshark, a network protocol analyzer.
 
-## Order of Execution for Scripts
+## Scripts
+
+The scripts should be executed in the order listed here. All scripts except for **check-hardware.sh**
+need to be executed with root privileges.
 
 1. check-packages.sh
 2. check-hardware.sh

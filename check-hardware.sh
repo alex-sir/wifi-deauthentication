@@ -1,5 +1,6 @@
 #!/bin/bash
 # Check wireless network interface controllers (WNICs) support for monitor mode and software WAPs
+# Author: Alex Carbajal
 # Dependencies:
 # - https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git
 # - https://github.com/BurntSushi/ripgrep
@@ -10,6 +11,13 @@ GREEN="\e[0;32m"
 BLUE="\e[0;34m"
 YELLOW="\e[0;33m"
 NORMAL="\e[0m"
+
+# Let user terminate the script at any time
+exit_script() {
+  echo -e "${RED}\n\nHardware check interrupted. Exiting...${NORMAL}"
+  exit 130
+}
+trap exit_script INT
 
 NUM_REQUIRED_WIFI_INTERFACES=1
 

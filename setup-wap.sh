@@ -1,5 +1,6 @@
 #!/bin/bash
-# Set up a wireless access point (WAP) for a Wi-Fi deauthentication attack simulation
+# Set up a software wireless access point (WAP) for a Wi-Fi deauthentication attack simulation
+# Author: Alex Carbajal
 # Dependencies:
 # - https://thekelleys.org.uk/dnsmasq/doc.html
 # - https://w1.fi/hostapd
@@ -11,12 +12,25 @@
 # - https://gitlab.com/psmisc/psmisc
 # - https://github.com/BurntSushi/ripgrep
 
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root"
+  exit
+fi
+
 BOLD="\e[1m"
 RED="\e[0;31m"
 GREEN="\e[0;32m"
 BLUE="\e[0;34m"
 YELLOW="\e[0;33m"
 NORMAL="\e[0m"
+
+# Let user terminate the script at any time
+exit_script() {
+  echo -e "${RED}\n\nSoftware WAP setup interrupted. Exiting...${NORMAL}"
+  exit 130
+}
+trap exit_script INT
 
 echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack Simulation Using Arch Linux ***${NORMAL}"
 echo -e "${YELLOW}=== Software WAP Setup ===${NORMAL}\n"
@@ -48,18 +62,18 @@ INTERFACE_NAME="${WIFI_INTERFACES[${INTERFACE_I} - 1]}"
 # Create a virtual interface for the software WAP and set it to AP mode
 WAP_INTERFACE_NAME="${INTERFACE_NAME}_wap"
 echo -e "Creating virtual interface ${BOLD}${WAP_INTERFACE_NAME}${NORMAL} for the software WAP"
-sudo iw dev "${INTERFACE_NAME}" interface add "${WAP_INTERFACE_NAME}" type __ap
+iw dev "${INTERFACE_NAME}" interface add "${WAP_INTERFACE_NAME}" type __ap
 echo -e
 
 # Ignore the software WAP in NetworkManager
 echo -e "Ignoring ${BOLD}${WAP_INTERFACE_NAME}${NORMAL} in NetworkManager"
-sudo nmcli device set "${WAP_INTERFACE_NAME}" managed no
+nmcli device set "${WAP_INTERFACE_NAME}" managed no
 echo -e
 
 # Set the software WAP to AP mode
 echo -e "Setting ${BOLD}${WAP_INTERFACE_NAME}${NORMAL} to AP mode"
-sudo ip link set dev "${WAP_INTERFACE_NAME}" down
-sudo iw dev "${WAP_INTERFACE_NAME}" set type __ap
+ip link set dev "${WAP_INTERFACE_NAME}" down
+iw dev "${WAP_INTERFACE_NAME}" set type __ap
 echo -e
 
 # Spoof the MAC address of the software WAP
@@ -68,7 +82,7 @@ select response in "Yes" "No"; do
   case $response in
   Yes)
     echo -e "Spoofing ${BOLD}${WAP_INTERFACE_NAME}${NORMAL} MAC address"
-    sudo macchanger -r "${WAP_INTERFACE_NAME}"
+    macchanger -r "${WAP_INTERFACE_NAME}"
     break
     ;;
   No) break ;;
@@ -83,7 +97,7 @@ WAP_SUBNET_MASK="24"
 WAP_IP="${WAP_IP_NETWORK_ID}${WAP_IP_HOST_ID}"
 WAP_IP_SUBNET="${WAP_IP}/${WAP_SUBNET_MASK}"
 echo -e "Adding IP address ${BOLD}${WAP_IP_SUBNET}${NORMAL} to ${BOLD}${WAP_INTERFACE_NAME}${NORMAL}"
-sudo ip addr add "${WAP_IP_SUBNET}" dev "${WAP_INTERFACE_NAME}"
+ip addr add "${WAP_IP_SUBNET}" dev "${WAP_INTERFACE_NAME}"
 echo -e
 
 # Let the user pick a custom SSID for the software WAP, otherwise use the default SSID
@@ -99,15 +113,15 @@ echo -e "${YELLOW}=== MISCELLANEOUS OPERATIONS ===${NORMAL}\n"
 
 # Enable packet forwarding using sysctl
 echo -e "Enabling IPv4 & IPv6 packet forwarding"
-sudo sysctl -w net.ipv4.ip_forward=1 \
+sysctl -w net.ipv4.ip_forward=1 \
   net.ipv4.conf.all.forwarding=1 \
   net.ipv6.conf.all.forwarding=1
 echo -e
 
 # Disable UFW if it is installed & enabled
-if command -v ufw >/dev/null 2>&1 && sudo ufw status | rg -q "Status: active"; then
+if command -v ufw >/dev/null 2>&1 && ufw status | rg -q "Status: active"; then
   echo -e "Active UFW instance detected - disabling"
-  sudo ufw disable
+  ufw disable
   echo -e
 fi
 
@@ -118,15 +132,15 @@ echo -e "${YELLOW}=== ENABLING NAT ===${NORMAL}\n"
 
 echo -e "Enabling NAT for the software WAP using ${BOLD}nftables${NORMAL}"
 # Create a new NAT table
-sudo nft add table inet nat
+nft add table inet nat
 # Create a postrouting chain for the new table
-sudo nft add chain inet nat postrouting '{ type nat hook postrouting priority srcnat ; }'
+nft add chain inet nat postrouting '{ type nat hook postrouting priority srcnat ; }'
 # Masquerade the addresses coming in to the internet-facing interface
-sudo nft add rule inet nat postrouting oifname "${INTERFACE_NAME}" masquerade
+nft add rule inet nat postrouting oifname "${INTERFACE_NAME}" masquerade
 # Allow forwarding of NAT traffic (default policy of /etc/nftables.conf drops it)
-sudo nft add chain inet nat forward
-sudo nft add rule inet nat forward ct state related,established accept
-sudo nft add rule inet nat forward iifname "${WAP_INTERFACE_NAME}" oifname "${INTERFACE_NAME}" accept
+nft add chain inet nat forward
+nft add rule inet nat forward ct state related,established accept
+nft add rule inet nat forward iifname "${WAP_INTERFACE_NAME}" oifname "${INTERFACE_NAME}" accept
 echo -e
 
 # *********************************************************************
@@ -140,13 +154,13 @@ DNSMASQ_CONF_FILE="${DNSMASQ_CONF_FILE_DIR}/dnsmasq-deauth.conf"
 if [ ! -f "${DNSMASQ_CONF_FILE}" ]; then
   # Create "dnsmasq-deauth.conf" in the appropriate directory if it does not exist
   echo -e "Creating ${BOLD}${DNSMASQ_CONF_FILE}${NORMAL}"
-  sudo mkdir -p ${DNSMASQ_CONF_FILE_DIR} && sudo touch ${DNSMASQ_CONF_FILE}
+  mkdir -p ${DNSMASQ_CONF_FILE_DIR} && touch ${DNSMASQ_CONF_FILE}
 else
   echo -e "${BOLD}${DNSMASQ_CONF_FILE}${NORMAL} already exists. File will be overwritten."
 fi
 
 # Set the contents of the hostapd configuration file
-sudo tee "${DNSMASQ_CONF_FILE}" >/dev/null <<EOF
+tee "${DNSMASQ_CONF_FILE}" >/dev/null <<EOF
 # dnsmasq configuration file for a software wireless access point (software WAP)
 # Provides DHCP & DNS services to devices connecting to the software WAP
 # For demonstration purposes only
@@ -170,7 +184,7 @@ EOF
 
 # Run the dnsmasq configuration file in the background
 echo -e "Running ${BOLD}${DNSMASQ_CONF_FILE}${NORMAL} in the background"
-sudo dnsmasq -C ${DNSMASQ_CONF_FILE} >/dev/null
+dnsmasq -C ${DNSMASQ_CONF_FILE} >/dev/null
 echo -e
 
 # *********************************************************************
@@ -181,20 +195,22 @@ echo -e "${YELLOW}=== CONFIGURING HOSTAPD ===${NORMAL}\n"
 # Grab the channel that the software WAP is connected to in the Wi-Fi network
 CHANNEL=$(iw dev "$INTERFACE_NAME" info | rg -oP 'channel \K\d+')
 echo -e "Parent interface ${BOLD}${INTERFACE_NAME}${NORMAL} connected on channel ${BOLD}${CHANNEL}${NORMAL}"
+echo -e
 
 # Create the hostapd configuration file for the software WAP
 HOSTAPD_CONF_FILE="/etc/hostapd/hostapd-deauth.conf"
 if [ ! -f "${HOSTAPD_CONF_FILE}" ]; then
   # Create "hostapd-deauth.conf" if it does not exist
   echo -e "Creating ${BOLD}${HOSTAPD_CONF_FILE}${NORMAL}"
-  sudo touch ${HOSTAPD_CONF_FILE}
+  touch ${HOSTAPD_CONF_FILE}
 else
   echo -e "${BOLD}${HOSTAPD_CONF_FILE}${NORMAL} already exists. File will be overwritten."
 fi
+echo -e
 
 # TODO: Programatically acquire the band for the software WAP (2.4 GHz vs 5 GHz)
 # Set the contents of the hostapd configuration file
-sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # hostapd configuration file to create a software wireless access point (software WAP)
 # For demonstration purposes only
 
@@ -230,75 +246,108 @@ ignore_broadcast_ssid=0
 preamble=1
 EOF
 
-# Ask user to input which security protocol to use (None, WEP, WPA, WPA2)
+# Ask user to input which security protocol to use (None, WEP, WPA-PSK, WPA2-PSK)
 USING_SECURITY_PROTOCOL=true
 SECURITY_PROTOCOL="WPA"
 echo -e "Select a wireless security protocol to use for the software WAP:"
-select response in "None" "WEP" "WPA" "WPA2"; do
+select response in "None" "WEP" "WPA-PSK" "WPA2-PSK"; do
   case $response in
   None)
     USING_SECURITY_PROTOCOL=false
-    sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
-# Open System Authentication (no password) for insecure Wi-Fi network
+    tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Open System Authentication (OSA) but with no password
 auth_algs=1
 EOF
     echo -e "${RED}Warning: Open Wi-Fi network - ANYONE can connect!${NORMAL}"
     break
     ;;
   WEP)
-    sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+    tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # Shared Key Authentication (WEP)
-auth_algs=3
-# Static WEP key configuration
-# Key number to use when transmitting
-wep_default_key=0
-wep_key0=""
+auth_algs=2
 EOF
     SECURITY_PROTOCOL="WEP"
-    echo -e "Using Wired Equivalent Privacy (WEP)${NORMAL}"
+    echo -e "Using ${BOLD}Wired Equivalent Privacy (WEP)${NORMAL}"
     break
     ;;
-  WPA)
+  WPA-PSK)
+    tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Open System Authentication (OSA) with password
+auth_algs=1
+# Enable WPA
+wpa=1
+# Enable pre-shared key (PSK) for WPA
+wpa_key_mgmt=WPA-PSK
+# Temporal Key Integrity Protocol (TKIP) encryption algorithm for pairwise keys
+wpa_pairwise=TKIP
+# Explicitly disable Management Frame Protection (MFP), allowing for deauthentication attacks
+ieee80211w=0
+EOF
+    echo -e "Using ${BOLD}Wi-Fi Protected Access Pre-Shared Key (WPA-PSK)${NORMAL}"
     break
     ;;
-  WPA2)
+  WPA2-PSK)
+    tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Open System Authentication (OSA) with password
+auth_algs=1
+# Enable WPA2
+wpa=2
+# Enable pre-shared key (PSK) for WPA
+wpa_key_mgmt=WPA-PSK
+# Robust Security Network (RSN) using pairwise cipher Counter Mode Cipher Block Chaining Message Authentication Code Protocol (CCMP)
+rsn_pairwise=CCMP
+# Explicitly disable Management Frame Protection (MFP), allowing for deauthentication attacks
+ieee80211w=0
+EOF
+    echo -e "Using ${BOLD}Wi-Fi Protected Access 2 Pre-Shared Key (WPA2-PSK)${NORMAL}"
     break
     ;;
   esac
 done
 echo -e
-sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
-# Open System Authentication (no password) for insecure Wi-Fi network
-# auth_algs=1
-# Allow Open, Shared Key, and WPA authentication
-auth_algs=3
-# Enable WPA2
-wpa=2
-# Use Pre-Shared Key (password) for WPA2
-wpa_key_mgmt=WPA-PSK
-# WPA (v1) encryption: CCMP (AES)
-wpa_pairwise=CCMP
-# WPA2 (RSN) encryption: CCMP (AES)
-rsn_pairwise=CCMP
-# Disable Management Frame Protection (MFP) – allows deauth attacks
-ieee80211w=0
-EOF
 
-# TODO: Ask user to input a Wi-Fi password after they select a security protocol
-WIFI_PASSWORD=""
-if [ "$USING_SECURITY_PROTOCOL" == "true" ]; then
-  sudo tee "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
-# Wi-Fi password
+# Ask user to input a Wi-Fi password after they select a security protocol
+# Input password for WEP
+if [ "$USING_SECURITY_PROTOCOL" == "true" ] && [ "$SECURITY_PROTOCOL" == "WEP" ]; then
+  # Keep asking user to input a password until it is valid
+  while true; do
+    read -r -p "Enter WEP Wi-Fi password (5, 13, or 16 characters): " WIFI_PASSWORD
+    case ${#WIFI_PASSWORD} in
+    5 | 13 | 16) break ;;
+    *) echo -e "Invalid Wi-Fi password length of ${BOLD}${#WIFI_PASSWORD}${NORMAL}. Must be 5, 13, or 16 characters for WEP.\n" ;;
+    esac
+  done
+  tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Static WEP key configuration
+# Key number to use when transmitting
+wep_default_key=0
+# Key/password
+wep_key0=${WIFI_PASSWORD}
+EOF
+  echo -e
+fi
+# Input password for WPA
+if [ "$USING_SECURITY_PROTOCOL" == "true" ] && [ "$SECURITY_PROTOCOL" == "WPA" ]; then
+  while true; do
+    read -r -p "Enter WPA Wi-Fi password (8-63 characters): " WIFI_PASSWORD
+    if ((${#WIFI_PASSWORD} >= 8 && ${#WIFI_PASSWORD} <= 63)); then
+      break
+    else
+      echo -e "Invalid Wi-Fi password length of ${BOLD}${#WIFI_PASSWORD}${NORMAL}. Must be between 8-63 characters for WPA.\n"
+    fi
+  done
+  tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# WPA Wi-Fi password
 wpa_passphrase=${WIFI_PASSWORD}
 EOF
+  echo -e
 fi
 
 # Run the hostapd configuration file in the background
 echo -e "Running ${BOLD}${HOSTAPD_CONF_FILE}${NORMAL} in the background"
-sudo hostapd -B ${HOSTAPD_CONF_FILE} >/dev/null
+hostapd -B ${HOSTAPD_CONF_FILE} >/dev/null
 echo -e
 
 # Enable the software WAP interface
-sudo ip link set dev "${WAP_INTERFACE_NAME}" up
+ip link set dev "${WAP_INTERFACE_NAME}" up
 echo -e "${GREEN}Software WAP running on name ${BOLD}${SSID}${NORMAL}"
-EOF
