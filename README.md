@@ -21,6 +21,10 @@ software WAP on Arch Linux. For demonstration purposes only.
 - **ripgrep**: Fast regex search tool.
 - **wireshark-qt**: Qt-based GUI for Wireshark, a network protocol analyzer.
 
+## Optional Packages
+
+- **wavemon**: Ncurses-based tool for monitoring wireless network devices.
+
 ## Scripts
 
 The scripts should be executed in the order listed here. All scripts except for **check-hardware.sh**
