@@ -1,5 +1,5 @@
 #!/bin/bash
-# Check wireless network interface controllers (WNICs) support for monitor mode and software WAPs
+# Check wireless network interface controllers (WNICs) support for monitor mode and an access point (AP)
 # Author: Alex Carbajal
 # Dependencies:
 # - https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git
@@ -44,3 +44,8 @@ fi
 # List the supported interface modes of all WNICs
 iw list | rg -A 7 "Supported interface modes"
 echo -e "\n${GREEN}Check that both '* AP' and '* monitor' are present for all wireless network interfaces.${NORMAL}"
+echo -e
+
+# List the valid interface combinations of all WNICs
+iw list | rg -A 4 "valid interface combinations"
+echo -e "\n${GREEN}${BOLD}#channels <= 1${NORMAL}${GREEN} means that the Wi-Fi connection and AP must be on the same channel.${NORMAL}"
