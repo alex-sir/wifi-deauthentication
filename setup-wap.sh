@@ -50,13 +50,17 @@ for ((i = 0; i < ${#WIFI_INTERFACES[@]}; i++)); do
 done
 echo -e
 
-# Let the user pick a WNIC from the numbered list of WNICs
-read -r -p "Select an interface to use for software WAP (1..${#WIFI_INTERFACES[@]}): " INTERFACE_I
-# Check that the pick is valid
-if ((INTERFACE_I < 1 || INTERFACE_I > ${#WIFI_INTERFACES[@]})); then
-  echo -e "${RED}Invalid interface. Please select an interface from the list.${NORMAL}"
-  exit 1
-fi
+while true; do
+  # Let the user pick a WNIC from the numbered list of WNICs
+  read -r -p "Select an interface to use for the software WAP (1..${#WIFI_INTERFACES[@]}): " INTERFACE_I
+  # Check that the pick is valid
+  if ((INTERFACE_I < 1 || INTERFACE_I > ${#WIFI_INTERFACES[@]})); then
+    echo -e "${RED}Invalid interface. Please select an interface from the list.${NORMAL}"
+    echo -e
+  else
+    break
+  fi
+done
 INTERFACE_NAME="${WIFI_INTERFACES[${INTERFACE_I} - 1]}"
 
 # Create a virtual interface for the software WAP and set it to AP mode
@@ -90,13 +94,18 @@ select response in "Yes" "No"; do
 done
 echo -e
 
-# Assign a static IPv4 address to the software WAP
-WAP_IP_NETWORK_ID="192.168.2"
+# Assign a random static IPv4 address to the software WAP
+WAP_IP_NETWORK_ID=$(
+  printf "%d.%d.%d" \
+    $((RANDOM % 256)) \
+    $((RANDOM % 256)) \
+    $((RANDOM % 256))
+)
 WAP_IP_HOST_ID=".1"
 WAP_SUBNET_MASK="24"
 WAP_IP="${WAP_IP_NETWORK_ID}${WAP_IP_HOST_ID}"
 WAP_IP_SUBNET="${WAP_IP}/${WAP_SUBNET_MASK}"
-echo -e "Adding IP address ${BOLD}${WAP_IP_SUBNET}${NORMAL} to ${BOLD}${WAP_INTERFACE_NAME}${NORMAL}"
+echo -e "Adding random IPv4 address ${BOLD}${WAP_IP_SUBNET}${NORMAL} to ${BOLD}${WAP_INTERFACE_NAME}${NORMAL}"
 ip addr add "${WAP_IP_SUBNET}" dev "${WAP_INTERFACE_NAME}"
 echo -e
 
@@ -259,7 +268,7 @@ echo -e
 
 # Ask user to input which security protocol to use (None, WEP, WPA-PSK, WPA2-PSK)
 USING_SECURITY_PROTOCOL=true
-SECURITY_PROTOCOL="WPA"
+SECURITY_PROTOCOL="None"
 echo -e "Select a wireless security protocol to use for the software WAP:"
 select response in "None" "WEP" "WPA-PSK" "WPA2-PSK"; do
   case $response in
@@ -285,10 +294,6 @@ EOF
     tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # Enable high throughput (HT)
 ieee80211n=1
-# Enable 802.11ac support (Wi-Fi 5)
-ieee80211ac=1
-# Enable 802.11ax support (Wi-Fi 6)
-ieee80211ax=1
 # Open System Authentication (OSA) with password
 auth_algs=1
 # Enable WPA
@@ -300,6 +305,7 @@ wpa_pairwise=TKIP
 # Explicitly disable Management Frame Protection (MFP), allowing for deauthentication attacks
 ieee80211w=0
 EOF
+    SECURITY_PROTOCOL="WPA1"
     echo -e "Using ${BOLD}Wi-Fi Protected Access Pre-Shared Key (WPA-PSK)${NORMAL}"
     break
     ;;
@@ -307,8 +313,6 @@ EOF
     tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # Enable high throughput (HT)
 ieee80211n=1
-# Enable 802.11ac support (Wi-Fi 5)
-ieee80211ac=1
 # Open System Authentication (OSA) with password
 auth_algs=1
 # Enable WPA2
@@ -320,11 +324,40 @@ rsn_pairwise=CCMP
 # Explicitly disable Management Frame Protection (MFP), allowing for deauthentication attacks
 ieee80211w=0
 EOF
+    SECURITY_PROTOCOL="WPA2"
     echo -e "Using ${BOLD}Wi-Fi Protected Access 2 Pre-Shared Key (WPA2-PSK)${NORMAL}"
     break
     ;;
   esac
 done
+echo -e
+
+# Check for supported Wi-Fi standards (Wi-Fi 5 and above)
+# Wi-Fi 5: 802.11ac (VHT) (2013), supports WPA1 & WPA2
+SUPPORTS_WIFI5=$(iw list | rg -q "VHT Capabilities" && echo true || echo false)
+if [ "$SUPPORTS_WIFI5" == "true" ] && [[ "$SECURITY_PROTOCOL" == "None" || "$SECURITY_PROTOCOL" == "WPA1" || "$SECURITY_PROTOCOL" == "WPA2" ]]; then
+  tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Enable 802.11ac support (Wi-Fi 5)
+ieee80211ac=1
+EOF
+  echo -e "Found support for ${BOLD}Wi-Fi 5 802.11ac (VHT)${NORMAL}"
+fi
+# Wi-Fi 6: 802.11ax (HE) (2021), does not support WPA1, requires WPA2 or WPA3 (not relevant to attack)
+SUPPORTS_WIFI6=$(iw list | rg -q "HE Capabilities|HE MAC Capabilities" && echo true || echo false)
+if [ "$SUPPORTS_WIFI6" == "true" ] && [[ "$SECURITY_PROTOCOL" == "None" || "$SECURITY_PROTOCOL" == "WPA2" ]]; then
+  tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Enable 802.11ax support (Wi-Fi 6)
+ieee80211ax=1
+EOF
+  echo -e "Found support for ${BOLD}Wi-Fi 6 802.11ax (HE)${NORMAL}"
+fi
+# Wi-Fi 7: 802.11be (EHT) (2024), does not support WPA1 or WPA2, requires WPA3 (not relevant to attack)
+# SUPPORTS_WIFI7=$(iw list | rg -q "EHT Capabilities" && echo true || echo false)
+# Enable 802.11be support (Wi-Fi 6)
+# ieee80211be=1
+if [ "$SECURITY_PROTOCOL" == "WEP" ] || [[ "$SUPPORTS_WIFI5" == "false" && "$SUPPORTS_WIFI6" == "false" ]]; then
+  echo -e "No support for ${BOLD}Wi-Fi 5 802.11ac (VHT)${NORMAL} or ${BOLD}Wi-Fi 6 802.11ax (HE)${NORMAL} detected"
+fi
 echo -e
 
 # Ask user to input a Wi-Fi password after they select a security protocol
@@ -348,7 +381,7 @@ EOF
   echo -e
 fi
 # Input password for WPA
-if [ "$USING_SECURITY_PROTOCOL" == "true" ] && [ "$SECURITY_PROTOCOL" == "WPA" ]; then
+if [ "$USING_SECURITY_PROTOCOL" == "true" ] && [[ "$SECURITY_PROTOCOL" == "WPA1" || "$SECURITY_PROTOCOL" == "WPA2" ]]; then
   while true; do
     read -r -p "Enter WPA Wi-Fi password (8-63 characters): " WIFI_PASSWORD
     if ((${#WIFI_PASSWORD} >= 8 && ${#WIFI_PASSWORD} <= 63)); then
