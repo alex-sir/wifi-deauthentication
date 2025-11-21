@@ -21,7 +21,8 @@ NORMAL="\e[0m"
 
 # Let user terminate the script at any time
 exit_script() {
-  echo -e "${RED}\n\nDeauthentication attack capture interrupted. Exiting...${NORMAL}"
+  echo -e "${RED}\n\nDeauthentication attack capture interrupted. Run ${BOLD}cleanup.sh${NORMAL}${RED} to reset environment.${NORMAL}"
+  echo -e "${RED}Exiting...${NORMAL}"
   exit 130
 }
 trap exit_script INT

@@ -27,7 +27,8 @@ NORMAL="\e[0m"
 
 # Let user terminate the script at any time
 exit_script() {
-  echo -e "${RED}\n\nSoftware WAP setup interrupted. Exiting...${NORMAL}"
+  echo -e "${RED}\n\nSoftware WAP setup interrupted. Run ${BOLD}cleanup.sh${NORMAL}${RED} to reset environment.${NORMAL}"
+  echo -e "${RED}Exiting...${NORMAL}"
   exit 130
 }
 trap exit_script INT
@@ -266,14 +267,16 @@ EOF
 esac
 echo -e
 
-# Ask user to input which security protocol to use (None, WEP, WPA-PSK, WPA2-PSK)
+# Ask user to input which security protocol to use (None, WEP, WPA-PSK, WPA2-PSK, WPA3-SAE)
 USING_SECURITY_PROTOCOL=true
+USING_WPA=true
 SECURITY_PROTOCOL="None"
 echo -e "Select a wireless security protocol to use for the software WAP:"
-select response in "None" "WEP" "WPA-PSK" "WPA2-PSK"; do
+select response in "None" "WEP" "WPA-PSK" "WPA2-PSK" "WPA3-SAE"; do
   case $response in
   None)
     USING_SECURITY_PROTOCOL=false
+    USING_WPA=false
     tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # Open System Authentication (OSA) but with no password
 auth_algs=1
@@ -282,6 +285,7 @@ EOF
     break
     ;;
   WEP)
+    USING_WPA=false
     tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # Shared Key Authentication (WEP)
 auth_algs=2
@@ -302,8 +306,6 @@ wpa=1
 wpa_key_mgmt=WPA-PSK
 # Temporal Key Integrity Protocol (TKIP) encryption algorithm for pairwise keys
 wpa_pairwise=TKIP
-# Explicitly disable Management Frame Protection (MFP), allowing for deauthentication attacks
-ieee80211w=0
 EOF
     SECURITY_PROTOCOL="WPA1"
     echo -e "Using ${BOLD}Wi-Fi Protected Access Pre-Shared Key (WPA-PSK)${NORMAL}"
@@ -321,45 +323,99 @@ wpa=2
 wpa_key_mgmt=WPA-PSK
 # Robust Security Network (RSN) using pairwise cipher Counter Mode Cipher Block Chaining Message Authentication Code Protocol (CCMP)
 rsn_pairwise=CCMP
-# Explicitly disable Management Frame Protection (MFP), allowing for deauthentication attacks
-ieee80211w=0
 EOF
     SECURITY_PROTOCOL="WPA2"
     echo -e "Using ${BOLD}Wi-Fi Protected Access 2 Pre-Shared Key (WPA2-PSK)${NORMAL}"
+    break
+    ;;
+  WPA3-SAE)
+    tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Enable WPA3
+wpa=2
+# Enable Simultaneous Authentication of Equals (SAE) for WPA3
+wpa_key_mgmt=SAE
+# Transition disable indication for full WPA3 (only SAE used)
+transition_disable=0
+# Enable SAE finite cyclic groups
+sae_groups=19 20 21
+# Protected Management Frames (PMF) required in WPA3, preventing deauthentication attacks
+ieee80211w=2
+EOF
+    SECURITY_PROTOCOL="WPA3"
+    echo -e "Using ${BOLD}Wi-Fi Protected Access 3 Simultaneous Authentication of Equals (WPA3-SAE)${NORMAL}"
     break
     ;;
   esac
 done
 echo -e
 
+# Ask user if they want Protected Management Frames (PMF). Only relevant for WPA2.
+if [ "$SECURITY_PROTOCOL" == "WPA2" ]; then
+  echo -e "Enable Protected Management Frames (PMF) for WPA2?"
+  select response in "Yes" "No"; do
+    case $response in
+    Yes)
+      echo -e "Enabling PMF"
+      tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Require Protected Management Frames (PMF), preventing deauthentication attacks
+ieee80211w=2
+EOF
+      break
+      ;;
+    No)
+      echo -e "Disabling PMF"
+      tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Explicitly disable Protected Management Frames (PMF), allowing for deauthentication attacks
+ieee80211w=0
+EOF
+      break
+      ;;
+    esac
+  done
+  echo -e
+fi
+
 # Check for supported Wi-Fi standards (Wi-Fi 5 and above)
+NO_SUPPORTS=true
 # Wi-Fi 5 802.11ac (VHT) (2013). Supports WPA1 & WPA2.
 SUPPORTS_WIFI5=$(iw list | rg -q "VHT Capabilities" && echo true || echo false)
 if [ "$SUPPORTS_WIFI5" == "true" ] && [[ "$SECURITY_PROTOCOL" == "None" || "$SECURITY_PROTOCOL" == "WPA1" || "$SECURITY_PROTOCOL" == "WPA2" ]]; then
+  NO_SUPPORTS=false
   tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # Enable 802.11ac support (Wi-Fi 5)
 ieee80211ac=1
 EOF
   echo -e "Found support for ${BOLD}Wi-Fi 5 802.11ac (VHT) (2013)${NORMAL}"
 fi
-# Wi-Fi 6 802.11ax (HE) (2021). Does not support WPA1, requires WPA2 or WPA3 (not relevant to attack).
+# Wi-Fi 6 802.11ax (HE) (2021). Does not support WPA1, requires WPA2 or WPA3.
 SUPPORTS_WIFI6=$(iw list | rg -q "HE Capabilities|HE MAC Capabilities" && echo true || echo false)
-if [ "$SUPPORTS_WIFI6" == "true" ] && [[ "$SECURITY_PROTOCOL" == "None" || "$SECURITY_PROTOCOL" == "WPA2" ]]; then
+if [ "$SUPPORTS_WIFI6" == "true" ] && [[ "$SECURITY_PROTOCOL" == "None" || "$SECURITY_PROTOCOL" == "WPA2" || "$SECURITY_PROTOCOL" == "WPA3" ]]; then
+  NO_SUPPORTS=false
   tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # Enable 802.11ax support (Wi-Fi 6)
 ieee80211ax=1
 EOF
   echo -e "Found support for ${BOLD}Wi-Fi 6 802.11ax (HE) (2021)${NORMAL}"
 fi
-# Wi-Fi 7 802.11be (EHT) (2024). Does not support WPA1 or WPA2, requires WPA3 (not relevant to attack).
-# SUPPORTS_WIFI7=$(iw list | rg -q "EHT Capabilities" && echo true || echo false)
+# Wi-Fi 7 802.11be (EHT) (2024). Does not support WPA1 or WPA2, requires WPA3.
+SUPPORTS_WIFI7=$(iw list | rg -q "EHT Capabilities|EHT MAC Capabilities" && echo true || echo false)
+if [ "$SUPPORTS_WIFI7" == "true" ] && [[ "$SECURITY_PROTOCOL" == "None" || "$SECURITY_PROTOCOL" == "WPA3" ]]; then
+  NO_SUPPORTS=false
+  tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
 # Enable 802.11be support (Wi-Fi 7)
-# ieee80211be=1
-if [ "$SECURITY_PROTOCOL" == "WEP" ] || [[ "$SUPPORTS_WIFI5" == "false" && "$SUPPORTS_WIFI6" == "false" ]]; then
-  echo -e "No support for ${BOLD}Wi-Fi 5 802.11ac (VHT) (2013)${NORMAL} or ${BOLD}Wi-Fi 6 802.11ax (HE) (2021)${NORMAL} detected"
-  # Wi-Fi 4 802.11n (HT) (2009). Supports WPA1 & WPA2.
-  # WEP requires 802.11g (2003) or 802.11b/802.11a (1999)
-  echo -e "Defaulting to highest available Wi-Fi standard"
+ieee80211be=1
+EOF
+  echo -e "Found support for ${BOLD}Wi-Fi 7 802.11be (EHT) (2024)${NORMAL}"
+fi
+if [ "$SECURITY_PROTOCOL" == "WEP" ] || [[ "$NO_SUPPORTS" == "true" ]]; then
+  echo -e "No support for ${BOLD}Wi-Fi 5 802.11ac (VHT) (2013)${NORMAL}, ${BOLD}Wi-Fi 6 802.11ax (HE) (2021)${NORMAL}, or Wi-Fi 7 802.11be (EHT) (2024) detected"
+  if [ "$SECURITY_PROTOCOL" == "WPA3" ]; then
+    echo -e "${RED}Warning: Wi-Fi 6 and above is required for WPA3. Software WAP will most likely not work.${NORMAL}"
+  else
+    # Wi-Fi 4 802.11n (HT) (2009). Supports WPA1 & WPA2.
+    # WEP requires 802.11g (2003) or 802.11b/802.11a (1999)
+    echo -e "Defaulting to highest available Wi-Fi standard"
+  fi
 fi
 echo -e
 
@@ -368,7 +424,7 @@ echo -e
 if [ "$USING_SECURITY_PROTOCOL" == "true" ] && [ "$SECURITY_PROTOCOL" == "WEP" ]; then
   # Keep asking user to input a password until it is valid
   while true; do
-    read -r -p "Enter WEP Wi-Fi password (5, 13, or 16 characters): " WIFI_PASSWORD
+    read -r -p "Enter ${SECURITY_PROTOCOL} Wi-Fi password (5, 13, or 16 characters): " WIFI_PASSWORD
     case ${#WIFI_PASSWORD} in
     5 | 13 | 16) break ;;
     *) echo -e "Invalid Wi-Fi password length of ${BOLD}${#WIFI_PASSWORD}${NORMAL}. Must be 5, 13, or 16 characters for WEP.\n" ;;
@@ -383,20 +439,29 @@ wep_key0=${WIFI_PASSWORD}
 EOF
   echo -e
 fi
-# Input password for WPA
-if [ "$USING_SECURITY_PROTOCOL" == "true" ] && [[ "$SECURITY_PROTOCOL" == "WPA1" || "$SECURITY_PROTOCOL" == "WPA2" ]]; then
+# Input password for WPA1, WPA2, WPA3
+if [ "$USING_SECURITY_PROTOCOL" == "true" ] && [ "$USING_WPA" == "true" ]; then
   while true; do
-    read -r -p "Enter WPA Wi-Fi password (8-63 characters): " WIFI_PASSWORD
+    read -r -p "Enter ${SECURITY_PROTOCOL} Wi-Fi password (8-63 characters): " WIFI_PASSWORD
     if ((${#WIFI_PASSWORD} >= 8 && ${#WIFI_PASSWORD} <= 63)); then
       break
     else
       echo -e "Invalid Wi-Fi password length of ${BOLD}${#WIFI_PASSWORD}${NORMAL}. Must be between 8-63 characters for WPA.\n"
     fi
   done
-  tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
-# WPA Wi-Fi password
+  # WPA1 & WPA2 use a different hostapd attribute to set the password than WPA3
+  if [ "$SECURITY_PROTOCOL" == "WPA1" ] || [ "$SECURITY_PROTOCOL" == "WPA2" ]; then
+    tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# ${SECURITY_PROTOCOL} Wi-Fi password
 wpa_passphrase=${WIFI_PASSWORD}
 EOF
+  fi
+  if [ "$SECURITY_PROTOCOL" == "WPA3" ]; then
+    tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# ${SECURITY_PROTOCOL} Wi-Fi password
+sae_password=${WIFI_PASSWORD}
+EOF
+  fi
   echo -e
 fi
 
