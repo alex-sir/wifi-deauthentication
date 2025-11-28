@@ -330,6 +330,8 @@ EOF
     ;;
   WPA3-SAE)
     tee -a "${HOSTAPD_CONF_FILE}" >/dev/null <<EOF
+# Enable high throughput (HT)
+ieee80211n=1
 # Enable WPA3
 wpa=2
 # Enable Simultaneous Authentication of Equals (SAE) for WPA3
@@ -340,6 +342,8 @@ transition_disable=0
 sae_groups=19 20 21
 # Protected Management Frames (PMF) required in WPA3, preventing deauthentication attacks
 ieee80211w=2
+# Robust Security Network (RSN) using pairwise cipher Counter Mode Cipher Block Chaining Message Authentication Code Protocol (CCMP)
+rsn_pairwise=CCMP
 EOF
     SECURITY_PROTOCOL="WPA3"
     echo -e "Using ${BOLD}Wi-Fi Protected Access 3 Simultaneous Authentication of Equals (WPA3-SAE)${NORMAL}"
