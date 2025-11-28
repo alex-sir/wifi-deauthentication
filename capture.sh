@@ -57,7 +57,7 @@ if ((INTERFACE_I < 1 || INTERFACE_I > ${#WIFI_INTERFACES[@]})); then
   echo -e "${RED}Invalid interface. Please select an interface from the list.${NORMAL}"
   exit 1
 fi
-INTERFACE_NAME_MONITOR="${WIFI_INTERFACES[${INTERFACE_I} - 1]}"
+INTERFACE_NAME="${WIFI_INTERFACES[${INTERFACE_I} - 1]}"
 
 # Set the interface into monitor mode
 INTERFACE_NAME_MONITOR="${INTERFACE_NAME}mon"
