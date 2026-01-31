@@ -85,4 +85,19 @@ if command -v ufw >/dev/null 2>&1 && ufw status | rg -q "Status: inactive"; then
   echo -e
 fi
 
+# Find the names of all Ethernet devices
+readarray -t ETHERNET_INTERFACES < <(nmcli -t -f DEVICE,TYPE device | rg 'ethernet' | cut -d: -f1)
+
+# Enable all found Ethernet devices
+echo -e "${BOLD}${#ETHERNET_INTERFACES[@]}${NORMAL} Ethernet interface(s) detected. Connecting..."
+for ((i = 0; i < ${#ETHERNET_INTERFACES[@]}; i++)); do
+  nmcli device connect "${ETHERNET_INTERFACES[i]}"
+done
+echo -e
+
+# Remove custom dnsmasq and hostpad configuration files
+echo -e "Removing ${BOLD}/etc/hostapd/hostapd-deauth.conf${NORMAL} and ${BOLD}/etc/dnsmasq.d/dnsmasq-deauth.conf${NORMAL}"
+rm /etc/hostapd/hostapd-deauth.conf /etc/dnsmasq.d/dnsmasq-deauth.conf
+echo -e
+
 echo -e "${GREEN}Cleanup complete - system restored${NORMAL}"

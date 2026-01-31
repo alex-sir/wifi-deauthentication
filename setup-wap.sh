@@ -64,6 +64,16 @@ while true; do
 done
 INTERFACE_NAME="${WIFI_INTERFACES[${INTERFACE_I} - 1]}"
 
+# Find the names of all Ethernet devices
+readarray -t ETHERNET_INTERFACES < <(nmcli -t -f DEVICE,TYPE device | rg 'ethernet' | cut -d: -f1)
+
+# Disconnect all found Ethernet devices. They cause conflicts with the software WAP working properly.
+echo -e "${BOLD}${#ETHERNET_INTERFACES[@]}${NORMAL} Ethernet interface(s) detected. Disconnecting..."
+for ((i = 0; i < ${#ETHERNET_INTERFACES[@]}; i++)); do
+  nmcli device disconnect "${ETHERNET_INTERFACES[i]}"
+done
+echo -e
+
 # Create a virtual interface for the software WAP and set it to AP mode
 WAP_INTERFACE_NAME="${INTERFACE_NAME}_wap"
 echo -e "Creating virtual interface ${BOLD}${WAP_INTERFACE_NAME}${NORMAL} for the software WAP"

@@ -16,8 +16,9 @@ It is recommended to utilize two Arch Linux machines for best results.
 Other Linux distributions could possibly run the scripts, with the exception
 of **check-packages.sh**. Support is not guaranteed for distributions not based
 on Arch Linux and not using the Arch Linux official repositories with the
-**pacman** package manager. For both machines, run **check-packages.sh** and
-**check-hardware.sh** before continuing. Verify all required packages are
+**pacman** package manager. It is assumed that **NetworkManager** is the network
+configuration tool being utilized. For both machines, run **check-packages.sh**
+and **check-hardware.sh** before continuing. Verify all required packages are
 installed and the proper hardware is available.
 
 - Machine 1: Serves as the software WAP
