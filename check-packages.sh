@@ -29,7 +29,7 @@ REQUIRED_PACKAGES=(
   "iproute2"
   "iw"
   "macchanger"
-  "mdk3"
+  "mdk4"
   "networkmanager"
   "nftables"
   "psmisc"

@@ -63,7 +63,7 @@ the two machine setup described above:
   and IP configuration.
 - **iw**: Command-line tool for configuring wireless interfaces.
 - **macchanger**: Utility to manipulate the MAC address of a network interface.
-- **mdk3**: Wireless attack tool that exploits vulnerabilities in IEEE 802.11 networks.
+- **mdk4**: Wireless attack tool that exploits vulnerabilities in IEEE 802.11 networks.
 - **networkmanager**: System service and tools for managing network connections,
   including Wi-Fi, Ethernet, and VPNs.
 - **nftables**: Framework for packet filtering, NAT, and other tasks involving
