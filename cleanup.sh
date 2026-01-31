@@ -26,7 +26,7 @@ exit_script() {
 }
 trap exit_script INT
 
-echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack Simulation Using Arch Linux ***${NORMAL}"
+echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack ***${NORMAL}"
 echo -e "${YELLOW}=== Cleanup ===${NORMAL}\n"
 
 # Find the names of the wireless network interface controllers (WNICs)

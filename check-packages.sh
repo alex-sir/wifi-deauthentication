@@ -48,7 +48,7 @@ is_installed() {
   pacman -Q "$1" &>/dev/null
 }
 
-echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack Simulation Using Arch Linux ***${NORMAL}"
+echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack ***${NORMAL}"
 echo -e "${YELLOW}=== Package Setup ===${NORMAL}"
 
 # Check if the user already has all required packages installed

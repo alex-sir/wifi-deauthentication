@@ -21,7 +21,7 @@ trap exit_script INT
 
 NUM_REQUIRED_WIFI_INTERFACES=1
 
-echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack Simulation Using Arch Linux ***${NORMAL}"
+echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack ***${NORMAL}"
 echo -e "${YELLOW}=== Hardware Check ===${NORMAL}"
 echo -e "${GREEN}NOTICE: This script performs a basic check. Verify more thoroughly yourself with the command 'iw list'.${NORMAL}\n"
 

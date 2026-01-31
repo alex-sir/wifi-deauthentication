@@ -33,7 +33,7 @@ exit_script() {
 }
 trap exit_script INT
 
-echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack Simulation Using Arch Linux ***${NORMAL}"
+echo -e "${BLUE}${BOLD}*** Wi-Fi Deauthentication Attack ***${NORMAL}"
 echo -e "${YELLOW}=== Software WAP Setup ===${NORMAL}\n"
 
 # *********************************************************************
