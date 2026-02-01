@@ -72,11 +72,11 @@ echo -e "${GREEN}Note down the ${BOLD}BSSID${NORMAL}${GREEN} & ${BOLD}CH${NORMAL
 read -n 1 -s -r -p "Press any key to continue..."
 echo -e
 airodump-ng -b abg "${INTERFACE_NAME_MONITOR}"
+echo -e
 
 # Ask user to enter BSSID & CH value of the WAP they wish to attack
 read -rp "Enter BSSID of WAP to attack (MAC Address, e.g. AA:BB:CC:11:22:33): " BSSID
 read -rp "Enter CH (Channel) of WAP to attack (1-165): " CHANNEL
-echo -e
 
 # Ask user to enter the file prefix of the file for data capture
 read -rp "Enter file prefix for data capture: " FILE_PREFIX

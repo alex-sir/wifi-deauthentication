@@ -422,7 +422,7 @@ EOF
   echo -e "Found support for ${BOLD}Wi-Fi 7 802.11be (EHT) (2024)${NORMAL}"
 fi
 if [ "$SECURITY_PROTOCOL" == "WEP" ] || [[ "$NO_SUPPORTS" == "true" ]]; then
-  echo -e "No support for ${BOLD}Wi-Fi 5 802.11ac (VHT) (2013)${NORMAL}, ${BOLD}Wi-Fi 6 802.11ax (HE) (2021)${NORMAL}, or Wi-Fi 7 802.11be (EHT) (2024) detected"
+  echo -e "No support for ${BOLD}Wi-Fi 5 802.11ac (VHT) (2013)${NORMAL}, ${BOLD}Wi-Fi 6 802.11ax (HE) (2021)${NORMAL}, or ${BOLD}Wi-Fi 7 802.11be (EHT) (2024)${NORMAL} detected"
   if [ "$SECURITY_PROTOCOL" == "WPA3" ]; then
     echo -e "${RED}Warning: Wi-Fi 6 and above is required for WPA3. Software WAP will most likely not work.${NORMAL}"
   else
