@@ -89,3 +89,11 @@ All scripts except for **check-hardware.sh** need to be executed with root privi
 4. capture.sh
 5. attack.sh
 6. cleanup.sh
+
+## Research Paper
+
+This work was accepted and presented at IEEE SoutheastCon 2026.
+The research paper is currently publicly available:
+
+- DOI: <https://doi.org/10.48550/arXiv.2602.23513>
+- PDF: <https://arxiv.org/pdf/2602.23513>
